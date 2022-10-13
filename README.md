@@ -1,6 +1,3 @@
 # article-scrap
-# 1. Requirement to run the scrapper
-- You should install the chromium selenium driver from the link: https://chromedriver.chromium.org/downloads
-- You should specify the driver path to the script 
-- Install all requirements library included in requirements.txt
 
+This scraper scrape annapurnapost.com article based on search keyword passed on it and save atleat 30 articles in json file
