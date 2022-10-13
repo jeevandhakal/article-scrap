@@ -26,7 +26,7 @@ def scrape_article(page_no, keyword):
 
 
 def clear_data(data):
-
+    base_url = "https://bg.annapurnapost.com"
     for item in data['data']['items']:
         title = item['title']
         img_ul = item['featuredImage']
@@ -46,7 +46,7 @@ def clear_data(data):
         article = {
             'title': title,
             'content': content,
-            'img_url': img_ul,
+            'img_url': base_url + img_ul,
             'published_on': published_on,
             'catagories': catagories
         }
@@ -65,4 +65,5 @@ if __name__ == "__main__":
     
     if len(articles) >= 30:
         with open('articles.json', 'w') as f:
-            json.dump(articles, f, indent=4)
+            # creates readable Nepali text in json file
+            json.dump(articles, f, indent=4, ensure_ascii=False) 
