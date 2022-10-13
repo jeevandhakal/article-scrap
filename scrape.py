@@ -1,79 +1,68 @@
-from selenium import webdriver
+import requests
 from bs4 import BeautifulSoup
-from selenium.webdriver.chrome.service import Service
 import json
 
+headers = {
+  'authority': 'bg.annapurnapost.com',
+  'accept': '*/*',
+  'accept-language': 'en-US,en;q=0.5',
+  'origin': 'https://annapurnapost.com',
+  'referer': 'https://annapurnapost.com/',
+  'sec-fetch-dest': 'empty',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-site': 'same-site',
+  'sec-gpc': '1',
+  'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/105.0.0.0 Safari/537.36'
+}
 
-class ScrapeArticle():
-    def __init__(self, url:str=None):
-        print("Initializing object")
-        if not url:
-            self.url = 'https://annapurnapost.com'
-        else:
-            self.url = url
+articles = []
 
-        # creating headless chrome browser for automatic interaction with web 
-        self.options = webdriver.ChromeOptions()
-        self.options.add_argument('--ignore-certificate-errors')
-        self.options.add_argument('--incognito')
-        self.options.add_argument('--headless')
-        driver_path = "/usr/bin/chromedriver" # give your driver path here
-        self.driver = webdriver.Chrome(service=Service(driver_path), options=self.options)
-        print("Initialization finished")
 
-    def search(self,keyword: str):
-        url = self.url + "/search/news?query=" + keyword
-        driver = self.driver
-        try:
-            print("wating to load all content")
-            driver.get(url)
+def scrape_article(page_no, keyword):
+    url = f"https://bg.annapurnapost.com/api/search?page={page_no}&title={keyword}"
+    response = requests.request("GET", url, headers=headers)
+    data = json.loads(response.text)
+    return data
 
-            pagesource = driver.page_source
 
-            soup = BeautifulSoup(pagesource, 'html5lib')
+def clear_data(data):
 
-            art_figs = soup.select('a.slider-news-list-item-desktop')
+    for item in data['data']['items']:
+        title = item['title']
+        img_ul = item['featuredImage']
+        published_on = item['publishOn']
 
-            # today_price = []
-            next_height = 1500
-            
-            while len(art_figs)<=30:
-                print("waiting to get 30 articles, now is:", len(art_figs))
-                
-                #Scroll to Bottom of Webpage
-                driver.execute_script(f"window.scrollTo(0,{next_height})")
+        # taking text only as content
+        content_html = item['content']
+        soup = BeautifulSoup(content_html, 'html5lib')
+        content = soup.text.replace('\n', '')
 
-                pagesource = driver.page_source
-                soup = BeautifulSoup(pagesource, 'html5lib')
-                art_figs = soup.select('a.slider-news-list-item-desktop')
-                next_height += 300
-                    
-            print("success the number of articles is:", len(art_figs))
-
-            articles = []
-            for art in art_figs:
-                art_url = art['href']
-                art_img_url = art.img['src']
-                title = art.img['alt']
-                article = {
-                    'title': title,
-                    'article_url': self.url + art_url,
-                    'image_url': art_img_url
-                }
-                articles.append(article)  
-
-            print("Writing articles in json file") 
-            with open("articles.json", 'w') as f:
-                json.dump(articles, f, indent=4)
-
-            print("closing the headless chrome browser!")
-            driver.close()
-
-        except ConnectionError:
-            print("No Internet access, Please check your internet connection!")
-            driver.close()
-
+        # taking catagory's name list
+        catagories_dict = item['categories']
+        catagories = []
+        for catagory in catagories_dict:
+            catagories.append(catagory['name'])
         
-scrape_article = ScrapeArticle()
+        article = {
+            'title': title,
+            'content': content,
+            'img_url': img_ul,
+            'published_on': published_on,
+            'catagories': catagories
+        }
+        articles.append(article)
 
-scrape_article.search("नेपाल") # pass the argument that you want to search
+
+if __name__ == "__main__":
+    page_no = 1
+    while len(articles) < 30:
+        try:
+            data = scrape_article(page_no, "नेपाल")
+            clear_data(data)
+            page_no += 1
+        except:
+            print("page limit exceed or network error")
+    
+    if len(articles) >= 30:
+        with open('articles.json', 'w') as f:
+            json.dump(articles, f, indent=4)
