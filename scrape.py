@@ -21,8 +21,9 @@ articles = []
 def scrape_article(page_no, keyword):
     url = f"https://bg.annapurnapost.com/api/search?page={page_no}&title={keyword}"
     response = requests.request("GET", url, headers=headers)
-    data = json.loads(response.text)
-    return data
+    if response.status_code == 200:
+        data = json.loads(response.text)
+        return data
 
 
 def clear_data(data):
@@ -58,10 +59,14 @@ if __name__ == "__main__":
     while len(articles) < 30:
         try:
             data = scrape_article(page_no, "नेपाल")
-            clear_data(data)
-            page_no += 1
+            if data:
+                clear_data(data)
+                page_no += 1
+            else:
+                print("Page limit exceed!")
         except:
-            print("page limit exceed or network error")
+            print("Network error!")
+            break
     
     if len(articles) >= 30:
         with open('articles.json', 'w') as f:
